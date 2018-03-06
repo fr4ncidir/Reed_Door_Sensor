@@ -31,10 +31,10 @@ from uuid import getnode
 
 logging.basicConfig(format="%(levelname)s %(asctime)-15s %(message)s",level=logging.DEBUG)
 
-# monitorLog = logging.getLogger("monitorLog")
-# handle_monitorLog = logging.handlers.SysLogHandler(address="/dev/log")
-# handle_monitorLog.setFormatter(logging.Formatter())
-# monitorLog.addHandler(handle_monitorLog)
+monitorLog = logging.getLogger("monitorLog")
+handle_monitorLog = logging.handlers.SysLogHandler(address="/dev/log")
+handle_monitorLog.setFormatter(logging.Formatter())
+monitorLog.addHandler(handle_monitorLog)
 
 plainLog = logging.getLogger("plainLog")
 identifier = md5(hex(getnode()).encode()).hexdigest()

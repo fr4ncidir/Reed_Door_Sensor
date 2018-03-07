@@ -93,36 +93,40 @@ auto-generated mail: do not reply
     #s.quit()
 
 def main(args):
+    plainLog.warning("{} reed_monitor.py successfully started".format(identifier))
+    monitorLog.warning("{} reed_monitor.py successfully started".format(identifier))
     try:
         ser = serial.Serial(port="/dev/ttyUSB0",baudrate=9600,parity=serial.PARITY_NONE,stopbits=serial.STOPBITS_ONE,bytesize=serial.EIGHTBITS,timeout=4)
         while True:
             line = ser.read(4).decode("cp1252")
             str_timestamp = TS_format.format(datetime.now())
             if len(line)<4:
-                plainLog.critical("Timeout Reached")
-                monitorLog.critical("Timeout Reached")
+                plainLog.critical("{} Timeout Reached".format(identifier))
+                monitorLog.critical("{} Timeout Reached".format(identifier))
                 handle_system_failure(str_timestamp,"Reading timeout Reached")
                 raise serial.SerialException("Reading timeout Reached")
             else:
                 if line=="-CO-":
-                    plainLog.warning("{} --- THE DOOR WAS OPENED".format(str_timestamp))
-                    monitorLog.warning("{} --- THE DOOR WAS OPENED".format(str_timestamp))
+                    plainLog.warning("{} {}--- THE DOOR WAS OPENED".format(str_timestamp,identifier))
+                    monitorLog.warning("{} {}--- THE DOOR WAS OPENED".format(str_timestamp,identifier))
                     handle_open_door(str_timestamp)
                 elif line=="+OC+":
-                    plainLog.warning("{} --- THE DOOR WAS CLOSED".format(str_timestamp))
-                    monitorLog.warning("{} --- THE DOOR WAS CLOSED".format(str_timestamp))
+                    plainLog.warning("{} {}--- THE DOOR WAS CLOSED".format(str_timestamp,identifier))
+                    monitorLog.warning("{} {}--- THE DOOR WAS CLOSED".format(str_timestamp,identifier))
                     handle_closed_door(str_timestamp)
                 elif line=="*UP*":
-                    plainLog.info("Device is up and running")
-                    monitorLog.info("Device is up and running")
+                    plainLog.info("{} Device is up and running".format(identifier))
+                    monitorLog.info("{} Device is up and running".format(identifier))
                 else:
-                    handle_system_failure(str_timestamp,"Unknown packet {}".format(line))
-                    raise serial.SerialException("Unknown packet {}".format(line))
+                    handle_system_failure(str_timestamp,"{} Unknown packet {}".format(identifier,line))
+                    raise serial.SerialException("{} Unknown packet {}".format(identifier,line))
     except Exception:
-        error_str = "EXCEPTION: {}".format(sys.exc_info()[1])
+        error_str = "{} EXCEPTION: {}".format(identifier,sys.exc_info()[1])
         plainLog.error(error_str)
         monitorLog.error(error_str)
         handle_system_failure(TS_format.format(datetime.utcnow()),error_str)
+    plainLog.warning("{} reed_monitor.py stopped working".format(identifier))
+    monitorLog.warning("{} reed_monitor.py stopped working".format(identifier))
     return 0
 
 if __name__ == '__main__':

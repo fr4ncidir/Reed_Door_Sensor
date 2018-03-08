@@ -116,7 +116,7 @@ def main(args):
                     handle_closed_door(str_timestamp)
                 elif line=="*UP*":
                     plainLog.info("{} Device is up and running".format(identifier))
-                    monitorLog.info("{} Device is up and running".format(identifier))
+                    #monitorLog.info("{} Device is up and running".format(identifier))
                 else:
                     handle_system_failure(str_timestamp,"{} Unknown packet {}".format(identifier,line))
                     raise serial.SerialException("{} Unknown packet {}".format(identifier,line))

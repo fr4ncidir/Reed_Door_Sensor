@@ -1,0 +1,14 @@
+[Unit]
+Description=My Reed open door Service
+After=remote-fs.target
+After=syslog.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/francesco/Documenti/Work/Reed_Door_Sensor/python_monitor
+ExecStart=/usr/bin/python3 /home/francesco/Documenti/Work/Reed_Door_Sensor/python_monitor/reed_monitor.py
+Restart=no # or always, on-abort, etc
+
+[Install]
+WantedBy=multi-user.target

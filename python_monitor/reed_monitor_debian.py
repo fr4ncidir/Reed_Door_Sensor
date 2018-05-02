@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-#  reed_monitor_debian.py
+#  reed_monitor.py
 #
 #  Copyright 2018 Francesco Antoniazzi <francesco.antoniazzi1991@gmail.com>
 #
@@ -26,14 +26,12 @@ import sys
 import logging
 import serial
 from datetime import datetime
-from hashlib import md5
-from uuid import getnode
 
-logging.basicConfig(format="%(levelname)s %(asctime)-15s %(message)s", level=logging.DEBUG)
+logging.basicConfig(format="%(levelname)s %(asctime)-15s %(message)s",
+                    level=logging.DEBUG)
 doorLog = logging.getLogger("DoorLog")
 
 TS_format = "{:%Y-%m-%d %H:%M:%S.%f}"
-identifier = md5(hex(getnode()).encode()).hexdigest()
 
 
 def handle_door_event(notification):
@@ -41,7 +39,7 @@ def handle_door_event(notification):
     # TODO creazione delle e-mail
 
 
-def main_service(serial_port):
+def main_service(serial_port, device_id):
     import sdnotify
     from logging import handlers, Formatter
 
@@ -52,108 +50,151 @@ def main_service(serial_port):
     handle_doorLog.setFormatter(logging.Formatter())
     doorLog.addHandler(handle_doorLog)
 
-    try:
-        ser = serial.Serial(port=serial_port, baudrate=9600,
-                            parity=serial.PARITY_NONE,
-                            stopbits=serial.STOPBITS_ONE,
-                            bytesize=serial.EIGHTBITS, timeout=4)
-    except:
-        doorLog.critical("id={} - exception={}".format(identifier, sys.exc_info()[1]))
-        n.notify("STATUS=exception while opening serial port")
-        n.notify("STOPPING=1")
-        return 1
-
-    n.notify("STATUS=successfully opened serial port")
-    previous = "S"
-    exception_counter = 0
-    while True:
-        timestamp = TS_format.format(datetime.now())
-
+    reopen = True
+    last_time_up = None
+    while reopen:
         try:
-            character = ser.read(1).decode("utf-8")
+            ser = serial.Serial(port=serial_port, baudrate=9600,
+                                parity=serial.PARITY_NONE,
+                                stopbits=serial.STOPBITS_ONE,
+                                bytesize=serial.EIGHTBITS, timeout=4)
         except:
-            doorLog.critical("id={} - exception={}".format(identifier, sys.exc_info()[1]))
-            exception_counter += 1
-            if exception_counter <= 5:
-                n.notify("STATUS={} #{}".format(sys.exc_info()[1], exception_counter))
-                continue
-            else:
-                n.notify("STATUS=exception while reading serial port")
-                n.notify("STOPPING=1")
-                ser.close()
-                return 1
+            doorLog.critical("id={} - exception={}".format(device_id,
+                             sys.exc_info()[1]))
+            n.notify("STATUS=exception while opening serial port")
+            n.notify("STOPPING=1")
+            return 1
 
+        reopen = False
+        n.notify("STATUS=successfully opened serial port")
+        previous = "S"
         exception_counter = 0
-        if character == "U":
-            n.notify("STATUS=up and running")
-            if previous != character:
-                doorLog.info("Reed door monitor on device {} is up and running".format(identifier))
-        elif character == "O":
-            notification = "Door opened at {}".format(timestamp)
-            n.notify("STATUS={}".format(notification))
-            if previous != character:
-                doorLog.warning(notification)
-                handle_door_event(notification)
-        elif character == "C":
-            notification = "Door closed at {}".format(timestamp)
-            n.notify("STATUS={}".format(notification))
-            if previous != character:
-                doorLog.warning(notification)
-                handle_door_event(notification)
-        else:
-            doorLog.error("Read unknown '{}' from serial port".format(character))
-            n.notify("STATUS=Read unknown '{}' from serial port".format(character))
-        previous = character
+        while True:
+            timestamp = TS_format.format(datetime.now())
 
+            try:
+                character = ser.read(1).decode("utf-8")
+            except:
+                doorLog.critical("id={} - exception={}"
+                                 .format(device_id, sys.exc_info()[1]))
+                exception_counter += 1
+                if exception_counter <= 5:
+                    n.notify("STATUS={} #{}".format(sys.exc_info()[1],
+                                                    exception_counter))
+                    continue
+                else:
+                    n.notify("STATUS=exception while reading serial port")
+                    n.notify("STOPPING=1")
+                    ser.close()
+                    return 1
+
+            if len(character) >= 1:
+                exception_counter = 0
+                if character == "U":
+                    n.notify("STATUS=up and running")
+                    last_time_up = datetime.now()
+                    if previous != character:
+                        doorLog.info("Reed door monitor on device {} is up and running".format(device_id))
+                elif character == "O":
+                    notification = "Door opened at {}".format(timestamp)
+                    n.notify("STATUS={}".format(notification))
+                    if previous != character:
+                        doorLog.warning(notification)
+                        handle_door_event(notification)
+                elif character == "C":
+                    notification = "Door closed at {}".format(timestamp)
+                    n.notify("STATUS={}".format(notification))
+                    if previous != character:
+                        doorLog.warning(notification)
+                        handle_door_event(notification)
+                else:
+                    if previous != "E":
+                        n.notify("STATUS=Read unknown '{}' from serial port".format(character.encode('hex')))
+                        doorLog.warning("Read unknown '{}'(len={}) from serial port".format(character.encode('hex'),
+                                        len(character)))
+                    else:
+                        reopen = True
+                        break
+                    character = "E"
+                previous = character
+        last_time_up_delta_seconds = (datetime.now()-last_time_up).total_seconds()
+        if ((last_time_up is not None) and (last_time_up_delta_seconds > 180)):
+            doorLog.critical("Timeout in Up-And-Running communication reached: {} seconds".format(last_time_up_delta_seconds))
+            n.notify("STOPPING=1")
+            ser.close()
+            return 1
+        elif last_time_up_delta_seconds > 0:
+            n.notify("STATUS=Up-and-running silence interval: {} seconds".format(last_time_up_delta_seconds))
+        ser.close()
     n.notify("STOPPING=1")
-    ser.close()
     return 0
 
 
-def main_on_request(serial_port):
-    try:
-        ser = serial.Serial(port=serial_port, baudrate=9600,
-                            parity=serial.PARITY_NONE,
-                            stopbits=serial.STOPBITS_ONE,
-                            bytesize=serial.EIGHTBITS, timeout=4)
-    except:
-        doorLog.critical("id={} - exception={}".format(identifier, sys.exc_info()[1]))
-        return 1
-
-    previous = "S"
-    while True:
-        timestamp = TS_format.format(datetime.now())
-
+def main_on_request(serial_port, device_id):
+    reopen = True
+    last_time_up = None
+    while reopen:
         try:
-            character = ser.read(1).decode("utf-8")
-        except KeyboardInterrupt:
-            doorLog.info("Keyboard interrupt!")
-            ser.close()
-            return 0
+            ser = serial.Serial(port=serial_port, baudrate=9600,
+                                parity=serial.PARITY_NONE,
+                                stopbits=serial.STOPBITS_ONE,
+                                bytesize=serial.EIGHTBITS, timeout=4)
         except:
-            doorLog.critical("id={} - exception={}".format(identifier, sys.exc_info()[1]))
-            ser.close()
+            doorLog.critical("id={} - exception={}".format(device_id,
+                             sys.exc_info()[1]))
             return 1
 
-        if character == "U":
-            if previous != character:
-                doorLog.info("Reed door monitor on device {} is up and running".format(identifier))
-        elif character == "O":
-            notification = "Door opened at {}".format(timestamp)
-            doorLog.warning(notification)
-        elif character == "C":
-            notification = "Door closed at {}".format(timestamp)
-            doorLog.warning(notification)
-        else:
-            doorLog.error("Read unknown '{}' from serial port".format(character))
-        previous = character
+        reopen = False
+        previous = "S"
+        while True:
+            timestamp = TS_format.format(datetime.now())
 
-    ser.close()
+            try:
+                character = ser.read(size=1)
+            except KeyboardInterrupt:
+                doorLog.info("Keyboard interrupt!")
+                ser.close()
+                return 0
+            except:
+                doorLog.critical("id={} - exception={}".format(device_id,
+                                 sys.exc_info()[1]))
+                ser.close()
+                return 1
+
+            if len(character) >= 1:
+                if character == "U":
+                    if previous != character:
+                        doorLog.info("Reed door monitor on device {} is up and running".format(device_id))
+                    last_time_up = datetime.now()
+                elif character == "O":
+                    notification = "Door opened at {}".format(timestamp)
+                    doorLog.warning(notification)
+                elif character == "C":
+                    notification = "Door closed at {}".format(timestamp)
+                    doorLog.warning(notification)
+                else:
+                    if previous != "E":
+                        doorLog.warning("Read unknown '{}'(len={}) from serial port".format(character.encode('hex'),
+                                        len(character)))
+                    else:
+                        reopen = True
+                        break
+                    character = "E"
+                previous = character
+        last_time_up_delta_seconds = (datetime.now()-last_time_up).total_seconds()
+        if ((last_time_up is not None) and (last_time_up_delta_seconds > 180)):
+            doorLog.critical("Timeout in Up-And-Running communication reached: {} seconds".format(last_time_up_delta_seconds))
+            ser.close()
+            return 1
+        elif last_time_up_delta_seconds > 0:
+            doorLog.info("Up-and-running silence interval: {} seconds".format(last_time_up_delta_seconds))
+        ser.close()
     return 0
 
 
 if __name__ == '__main__':
     import argparse
+    import subprocess
     parser = argparse.ArgumentParser(description="Debian reed door sensor monitor")
     parser.add_argument("run-mode", choices=["service", "on-request"],
                         help="identifies if the script runs as standalone or systemd service")
@@ -162,7 +203,17 @@ if __name__ == '__main__':
                         help="address in /dev of the device port")
     args = vars(parser.parse_args())
 
+    bashCommand = "udevadm info -q all -n {}".format(args["sp"])
+    process1 = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
+    process2 = subprocess.Popen(["grep", "ID_SERIAL_SHORT=*"],
+                                stdin=process1.stdout,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE)
+    process1.stdout.close()
+    output, error = process2.communicate()
+    device_id = output.split("=")[1]
+
     if args["run-mode"] == "service":
-        sys.exit(main_service(args["sp"]))
+        sys.exit(main_service(args["sp"], device_id))
     else:
-        sys.exit(main_on_request(args["sp"]))
+        sys.exit(main_on_request(args["sp"], device_id))

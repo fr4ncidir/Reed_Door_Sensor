@@ -47,15 +47,15 @@ void loop() {
   delay(250);
   new_s = digitalRead(SENSOR_IN);
   if (new_s!=old_s) {
-    if (old_s==LOW) Serial.print("-CO-");
-    else Serial.print("+OC+");
+    if (old_s==LOW) Serial.print("O");
+    else Serial.print("C");
     old_s = new_s;
   }
   if (led==HIGH) led = LOW;
   else led = HIGH;
   digitalWrite(LED_BUILTIN,led);
   if (mod4%4==0) {
-    Serial.print("*UP*");
+    Serial.print("U");
     mod4=0;
   }
   mod4++;

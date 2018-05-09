@@ -73,7 +73,7 @@ def main_service(serial_port, device_id):
         # reopen flag in case of reading mistakes
         reopen = False
         n.notify("STATUS=successfully opened serial port")
-        previous = "S"
+        previous = b'S'
         exception_counter = 0
         while True:
             timestamp = TS_format.format(datetime.now())
@@ -99,34 +99,34 @@ def main_service(serial_port, device_id):
 
             if len(character) >= 1:
                 exception_counter = 0
-                if character == "U":
+                if character == b'U':
                     n.notify("STATUS=up and running")
                     last_time_up = datetime.now()
                     if previous != character:
-                        doorLog.info("Reed door monitor on device {} is up and running".format(device_id))
-                elif character == "O":
+                        doorLog.info("RDM on device {} is up and running".format(device_id))
+                elif character == b'O':
                     notification = "Door opened at {}".format(timestamp)
                     n.notify("STATUS={}".format(notification))
                     if previous != character:
                         doorLog.warning(notification)
                         handle_door_event(notification)
-                elif character == "C":
+                elif character == b'C':
                     notification = "Door closed at {}".format(timestamp)
                     n.notify("STATUS={}".format(notification))
                     if previous != character:
                         doorLog.warning(notification)
                         handle_door_event(notification)
                 else:
-                    if previous != "E":
-                        n.notify("STATUS=Read unknown '{}' from serial port".format(character.encode('hex')))
-                        doorLog.warning("Read unknown '{}'(len={}) from serial port".format(character.encode('hex'),
+                    if previous != b'E':
+                        n.notify("STATUS=Read unknown '{}' from serial port".format(character))
+                        doorLog.warning("Read unknown '{}'(len={}) from serial port".format(character,
                                         len(character)))
                     else:
                         # if we have two mistakes in reading, try close
                         # and reopen the serial port
                         reopen = True
                         break
-                    character = "E"
+                    character = b'E'
                 previous = character
         # when closing and reopening because of mistakes, we check that
         # not too much time has passed. In case, we exit and call
@@ -186,7 +186,7 @@ def main_on_request(serial_port, device_id):
             if len(character) >= 1:
                 if character == b'U':
                     if previous != character:
-                        doorLog.info("Reed door monitor on device {} is up and running".format(device_id))
+                        doorLog.info("RDM on device {} is up and running".format(device_id))
                     last_time_up = datetime.now()
                 elif character == b'O':
                     notification = "Door opened at {}".format(timestamp)
@@ -237,7 +237,7 @@ if __name__ == '__main__':
                                     stderr=subprocess.PIPE)
         process1.stdout.close()
         output, error = process2.communicate()
-        device_id = output.split("=")[1]
+        device_id = output.split("=")[1].replace("\n","")
     else:
         device_id = args["sp"]
 

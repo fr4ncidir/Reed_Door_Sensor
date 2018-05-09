@@ -164,7 +164,7 @@ def main_on_request(serial_port, device_id):
 
         # reopen flag in case of reading mistakes
         reopen = False
-        previous = "S"
+        previous = b'S'
         while True:
             timestamp = TS_format.format(datetime.now())
 
@@ -184,24 +184,24 @@ def main_on_request(serial_port, device_id):
                 return 1
 
             if len(character) >= 1:
-                if character == "U":
+                if character == b'U':
                     if previous != character:
                         doorLog.info("Reed door monitor on device {} is up and running".format(device_id))
                     last_time_up = datetime.now()
-                elif character == "O":
+                elif character == b'O':
                     notification = "Door opened at {}".format(timestamp)
                     doorLog.warning(notification)
-                elif character == "C":
+                elif character == b'C':
                     notification = "Door closed at {}".format(timestamp)
                     doorLog.warning(notification)
                 else:
-                    if previous != "E":
-                        doorLog.warning("Read unknown '{}'(len={}) from serial port".format(character.encode('hex'),
+                    if previous != b'E':
+                        doorLog.warning("Read unknown {}(len={}) from serial port".format(character,
                                         len(character)))
                     else:
                         reopen = True
                         break
-                    character = "E"
+                    character = b'E'
                 previous = character
         last_time_up_delta_seconds = (datetime.now()-last_time_up).total_seconds()
         if ((last_time_up is not None) and (last_time_up_delta_seconds > 180)):
@@ -217,6 +217,7 @@ def main_on_request(serial_port, device_id):
 if __name__ == '__main__':
     import argparse
     import subprocess
+    import platform
     # parsing of command line arguments
     parser = argparse.ArgumentParser(description="Debian reed door sensor monitor")
     parser.add_argument("run-mode", choices=["service", "on-request"],
@@ -226,16 +227,19 @@ if __name__ == '__main__':
                         help="address in /dev of the device port")
     args = vars(parser.parse_args())
 
-    # retrieving constructor serial id of device
-    bashCommand = "udevadm info -q all -n {}".format(args["sp"])
-    process1 = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
-    process2 = subprocess.Popen(["grep", "ID_SERIAL_SHORT=*"],
-                                stdin=process1.stdout,
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE)
-    process1.stdout.close()
-    output, error = process2.communicate()
-    device_id = output.split("=")[1]
+    if platform.system() != "Windows":
+        # retrieving constructor serial id of device
+        bashCommand = "udevadm info -q all -n {}".format(args["sp"])
+        process1 = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
+        process2 = subprocess.Popen(["grep", "ID_SERIAL_SHORT=*"],
+                                    stdin=process1.stdout,
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE)
+        process1.stdout.close()
+        output, error = process2.communicate()
+        device_id = output.split("=")[1]
+    else:
+        device_id = args["sp"]
 
     # calling main procedure
     if args["run-mode"] == "service":

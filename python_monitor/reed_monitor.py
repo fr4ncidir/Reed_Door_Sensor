@@ -26,6 +26,7 @@ import sys
 import logging
 import serial
 from datetime import datetime
+from time import sleep
 
 # Setup main logging format and timestamp format
 logging.basicConfig(format="%(levelname)s %(asctime)-15s %(message)s",
@@ -53,6 +54,7 @@ def main_service(serial_port, device_id):
     handle_doorLog.setFormatter(logging.Formatter())
     doorLog.addHandler(handle_doorLog)
 
+    sleep(1)
     reopen = True
     last_time_up = None
     while reopen:
@@ -125,6 +127,7 @@ def main_service(serial_port, device_id):
                         # if we have two mistakes in reading, try close
                         # and reopen the serial port
                         reopen = True
+                        sleep(1)
                         break
                     character = b'E'
                 previous = character

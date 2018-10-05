@@ -6,8 +6,8 @@ After=syslog.target
 [Service]
 Type=simple
 User=root
-WorkingDirectory=__WORKING_DIRECTORY__
-ExecStart=__PYTHON_PATH__ __FULL_SCRIPT_PATH__
+WorkingDirectory=/home/francesco/Documents/Reed_Door_Sensor/python_monitor
+ExecStart=/bin/python __FULL_SCRIPT_PATH__
 Restart=no # or always, on-abort, etc
 
 [Install]

@@ -36,14 +36,18 @@ cd ../Reed_Door_Sensor/python_monitor
 sed "s@__WORKING_DIRECTORY__@`pwd`@g" reed_door_daemon.service > temp.service
 sed -i "s@__PYTHON__PATH@`which python`@g" temp.service
 sed "s@__FULL_SCRIPT_PATH__@`realpath reed_monitor.py`@g" temp.service > /etc/systemd/system/reed_daemon.service
+ln --symbolic /etc/systemd/system/reed_daemon.service .
+rm temp.service
 
 echo Creating udev rule...
 #SNUMBER=`udevadm info -q all -n $1 | grep -o "regex"`
 if [ -e /etc/udev/rules.d/10-local.rules ] ; then
+    ls -la /etc/udev/rules.d
     echo Rule name exists, aborting
     exit
 fi
 #sed "s@__SERIAL_NUMBER__@$SNUMBER@g" udev_rule.rules > /etc/udev/rules.d/10-local.rules
+#ln --symbolic /etc/udev/rules.d/10-local.rules
 
 cd $WD
 echo Installed.

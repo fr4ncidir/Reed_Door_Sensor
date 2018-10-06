@@ -1,0 +1,1 @@
+SUBSYSTEMS=="usb", ATTRS{serial}=="__SERIAL_NUMBER__", ENV{SYSTEMD_WANTS}="reed_daemon.service"

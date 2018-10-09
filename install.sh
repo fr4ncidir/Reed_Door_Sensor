@@ -18,7 +18,7 @@ if [ "$EUID" -ne 0 ] ; then
 fi
 
 # check for the tty device existence
-if [ -b "$1" ] ; then
+if [ -e "$1" ] ; then
     echo "Serial port <$1> was found"
 else
     echo "Serial port <$1> not found, aborting"

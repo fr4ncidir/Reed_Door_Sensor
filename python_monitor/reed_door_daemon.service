@@ -7,7 +7,7 @@ After=syslog.target
 Type=simple
 User=root
 WorkingDirectory=__WORKING_DIRECTORY__
-ExecStart=__PYTHON_PATH__ __FULL_SCRIPT_PATH__
+ExecStart=__PYTHON_PATH__ __FULL_SCRIPT_PATH__ service --sp __TTY_PATH__
 Restart=no # or always, on-abort, etc
 
 [Install]

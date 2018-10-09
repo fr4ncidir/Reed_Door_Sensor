@@ -46,7 +46,7 @@ python setup.py install
 echo Creating systemd service....
 cd ../Reed_Door_Sensor/python_monitor
 sed "s@__WORKING_DIRECTORY__@`pwd`@g" reed_door_daemon.service > temp.service
-sed -i "s@__PYTHON__PATH__@`which python`@g" temp.service
+sed -i "s@__PYTHON_PATH__@`which python`@g" temp.service
 sed -i "s@__TTY_PATH__@$1@g" temp.service
 # puts the service file in systemd folder
 sed "s@__FULL_SCRIPT_PATH__@`realpath reed_monitor.py`@g" temp.service > /etc/systemd/system/reed_daemon.service

@@ -25,7 +25,16 @@ else
     exit
 fi
 
-WD=`pwd`
+# check that this script is ran from outside parent directory
+if [ -e "./install.sh" ] ; then
+	cd ..
+fi
+if [ ! -d "./Reed_Door_Sensor" ] ; then
+	echo Wrong folder! Check README
+	exit
+fi
+
+WD=$(pwd)
 
 # installs pyserial
 echo Installing packet dependencies...
@@ -43,7 +52,7 @@ echo Installing sdnotify...
 python setup.py install
 
 # creates the systemd service
-echo Creating systemd service....
+echo Creating systemd service....q
 cd ../Reed_Door_Sensor/python_monitor
 sed "s@__WORKING_DIRECTORY__@`pwd`@g" reed_door_daemon.service > temp.service
 sed -i "s@__PYTHON_PATH__@`which python`@g" temp.service

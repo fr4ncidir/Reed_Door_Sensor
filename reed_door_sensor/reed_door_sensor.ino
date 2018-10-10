@@ -80,7 +80,7 @@ void loop() {
 Serial pc(USBTX, USBRX, 9600);
 
 DigitalIn sensor_in(PB_6,PullDown);
-DigitalOut sensor_out(PB_7);
+DigitalOut sensor_out(PB_7,1);
 DigitalOut myled(LED1);
 
 int main() {

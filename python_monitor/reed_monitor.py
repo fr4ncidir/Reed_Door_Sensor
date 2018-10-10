@@ -41,7 +41,7 @@ TS_format = "{:%Y-%m-%d %H:%M:%S.%f}"
 
 
 def handle_door_event(notification):
-    doorLog.message(notification)
+    doorLog.debug(notification)
     # TODO creazione delle e-mail?
     # write here the code to notify an event in specific ways...
 
@@ -116,6 +116,7 @@ def main_service(serial_port, device_id):
                     # received char is 'O' -> the door was opened
                     notification = "Door opened at {}".format(timestamp)
                     n.notify("STATUS={}".format(notification))
+                    last_time_up = datetime.now()
                     if previous != character:
                         doorLog.warning(notification)
                         handle_door_event(notification)
@@ -123,6 +124,7 @@ def main_service(serial_port, device_id):
                     # received char is 'C' -> the door was closed
                     notification = "Door closed at {}".format(timestamp)
                     n.notify("STATUS={}".format(notification))
+                    last_time_up = datetime.now()
                     if previous != character:
                         doorLog.warning(notification)
                         handle_door_event(notification)
@@ -142,23 +144,25 @@ def main_service(serial_port, device_id):
         # when closing and reopening because of mistakes, we check that
         # not too much time has passed. In case, we exit and call
         # the event handler
-        last_time_up_delta_seconds = (datetime.now()-last_time_up).total_seconds()
-        if ((last_time_up is not None) and (last_time_up_delta_seconds > 180)):
-            # lost communication...
-            notification = "Timeout in Up-And-Running communication reached: {} seconds".format(last_time_up_delta_seconds)
-            handle_door_event(notification)
-            doorLog.critical(notification)
-            n.notify("STOPPING=1")
+        if (last_time_up is not None):
+            last_time_up_delta_seconds = (datetime.now()-last_time_up).total_seconds()
+            if (last_time_up_delta_seconds > 180):
+                # lost communication...
+                notification = "Timeout in Up-And-Running communication reached: {} seconds".format(last_time_up_delta_seconds)
+                handle_door_event(notification)
+                doorLog.critical(notification)
+                n.notify("STOPPING=1")
+                ser.close()
+                return 1
+            elif last_time_up_delta_seconds > 0:
+                n.notify("STATUS=Up-and-running silence interval: {} seconds".format(last_time_up_delta_seconds))
             ser.close()
-            return 1
-        elif last_time_up_delta_seconds > 0:
-            n.notify("STATUS=Up-and-running silence interval: {} seconds".format(last_time_up_delta_seconds))
-        ser.close()
     n.notify("STOPPING=1")
     return 0
 
 
 def main_on_request(serial_port, device_id):
+    print("On request main")
     reopen = True
     last_time_up = None
     while reopen:

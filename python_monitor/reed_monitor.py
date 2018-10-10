@@ -29,8 +29,12 @@ from datetime import datetime
 from time import sleep
 
 # Setup main logging format and timestamp format
+# comment the following line, if you want to log to a file!
 logging.basicConfig(format="%(levelname)s %(asctime)-15s %(message)s",
                     level=logging.DEBUG)
+# uncomment the following line(s), if you want to log to a file!
+# logging.basicConfig(filename="PATH_TO_LOGFILE",format="%(levelname)s %(asctime)-15s %(message)s",
+#                    level=logging.DEBUG)
 doorLog = logging.getLogger("DoorLog")
 
 TS_format = "{:%Y-%m-%d %H:%M:%S.%f}"
@@ -38,7 +42,8 @@ TS_format = "{:%Y-%m-%d %H:%M:%S.%f}"
 
 def handle_door_event(notification):
     doorLog.message(notification)
-    # TODO creazione delle e-mail
+    # TODO creazione delle e-mail?
+    # write here the code to notify an event in specific ways...
 
 
 def main_service(serial_port, device_id):
@@ -49,7 +54,7 @@ def main_service(serial_port, device_id):
     n = sdnotify.SystemdNotifier()
     n.notify("READY=1")
 
-    # log is redirected to syslog
+    # log is redirected to syslog. Comment the following 3 lines if you are redirecting log to a file
     handle_doorLog = logging.handlers.SysLogHandler(address="/dev/log")
     handle_doorLog.setFormatter(logging.Formatter())
     doorLog.addHandler(handle_doorLog)
@@ -102,30 +107,33 @@ def main_service(serial_port, device_id):
             if len(character) >= 1:
                 exception_counter = 0
                 if character == b'U':
+                    # received char is 'U' -> up and running
                     n.notify("STATUS=up and running")
                     last_time_up = datetime.now()
                     if previous != character:
                         doorLog.info("RDM on device {} is up and running".format(device_id))
                 elif character == b'O':
+                    # received char is 'O' -> the door was opened
                     notification = "Door opened at {}".format(timestamp)
                     n.notify("STATUS={}".format(notification))
                     if previous != character:
                         doorLog.warning(notification)
                         handle_door_event(notification)
                 elif character == b'C':
+                    # received char is 'C' -> the door was closed
                     notification = "Door closed at {}".format(timestamp)
                     n.notify("STATUS={}".format(notification))
                     if previous != character:
                         doorLog.warning(notification)
                         handle_door_event(notification)
                 else:
+                    # Error case
                     if previous != b'E':
                         n.notify("STATUS=Read unknown '{}' from serial port".format(character))
                         doorLog.warning("Read unknown '{}'(len={}) from serial port".format(character,
                                         len(character)))
                     else:
-                        # if we have two mistakes in reading, try close
-                        # and reopen the serial port
+                        # if we have two mistakes in reading, try close and reopen the serial port
                         reopen = True
                         sleep(1)
                         break
@@ -136,6 +144,7 @@ def main_service(serial_port, device_id):
         # the event handler
         last_time_up_delta_seconds = (datetime.now()-last_time_up).total_seconds()
         if ((last_time_up is not None) and (last_time_up_delta_seconds > 180)):
+            # lost communication...
             notification = "Timeout in Up-And-Running communication reached: {} seconds".format(last_time_up_delta_seconds)
             handle_door_event(notification)
             doorLog.critical(notification)

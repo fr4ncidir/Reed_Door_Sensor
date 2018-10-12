@@ -1,6 +1,5 @@
 ## Hardware
-ESP8266 Huzzah, programmed by Arduino IDE
-ST Nucleo32, programmed by [mbed](https://www.mbed.com/en/) online compiler.
+ESP8266 Huzzah, programmed by Arduino IDE, or equivalently ST Nucleo32, programmed by [mbed](https://www.mbed.com/en/) online compiler.
 The software is available in the `./reed_door_sensor/reed_door_sensor.ino` file.
 
 ## Install

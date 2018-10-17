@@ -41,9 +41,10 @@ TS_format = "{:%Y-%m-%d %H:%M:%S.%f}"
 
 
 def handle_door_event(notification):
-    doorLog.debug(notification)
+    # doorLog.debug(notification)
     # TODO creazione delle e-mail?
     # write here the code to notify an event in specific ways...
+    pass
 
 
 def main_service(serial_port, device_id):

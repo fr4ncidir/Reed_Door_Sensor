@@ -21,8 +21,8 @@
  */
 
 // Comment the board you are not using.
-#define NUCLEO_32
-//#define HUZZAH
+//#define NUCLEO_32
+#define HUZZAH
 
 //------------------------------------
 // Hyperterminal configuration
@@ -39,46 +39,57 @@
  * Otherwise, switching from open to closed
  *   C
  */
-
+ 
+int examine(int new_status,int old_status,char *variant);
+ 
 #ifdef HUZZAH
-#define SENSOR_IN   5
-#define SENSOR_OUT  4
+#define SENSOR_1_IN   	5
+#define SENSOR_1_OUT  	4
+#define SENSOR_2_IN		14
+#define SENSOR_2_OUT	12
+
+#define print_on_serial(x) 	Serial.print(x)
 /*
  * https://learn.adafruit.com/assets/46249
  * Physical pin 14 = SENSOR_IN
  * Physical pin 13 = SENSOR_OUT
  * Notice: lack of pull down resistor in Huzzah makes the 
  * difference between this project and the Nucleo32 project on mbed.
+ *
+ * USE pins 4/5 for FRONT DOOR
+ * USE pins 14/12 for REAR DOOR
  */
 
-int old_s,new_s,mod4=0,led=LOW;
+int old_s_1,old_s_2,mod4=0,led=LOW;
+char outputs_1[2] = {'c','o'};
+char outputs_2[2] = {'C','O'};
  
 void setup() {
-  Serial.begin(9600);
-  pinMode(SENSOR_IN,INPUT_PULLUP);
-  pinMode(SENSOR_OUT,OUTPUT);
-  pinMode(LED_BUILTIN, OUTPUT);
-  digitalWrite(SENSOR_OUT,LOW);
-  digitalWrite(LED_BUILTIN,led);
-  old_s = digitalRead(SENSOR_IN);
+	Serial.begin(9600);
+	pinMode(SENSOR_1_IN,INPUT_PULLUP);
+	pinMode(SENSOR_1_OUT,OUTPUT);
+	pinMode(SENSOR_2_IN,INPUT_PULLUP);
+	pinMode(SENSOR_2_OUT,OUTPUT);
+	pinMode(LED_BUILTIN, OUTPUT);
+	digitalWrite(SENSOR_1_OUT,LOW);
+	digitalWrite(SENSOR_2_OUT,LOW);
+	digitalWrite(LED_BUILTIN,led);
+	old_s_1 = digitalRead(SENSOR_1_IN);
+	old_s_2 = digitalRead(SENSOR_2_IN);
 }
 
 void loop() {
-  delay(250);
-  new_s = digitalRead(SENSOR_IN);
-  if (new_s!=old_s) {
-    if (old_s==LOW) Serial.print("O");
-    else Serial.print("C");
-    old_s = new_s;
-  }
-  if (led==HIGH) led = LOW;
-  else led = HIGH;
-  digitalWrite(LED_BUILTIN,led);
-  if (mod4%4==0) {
-    Serial.print("U");
-    mod4=0;
-  }
-  mod4++;
+	delay(250);
+	old_s_1 = examine(digitalRead(SENSOR_1_IN),old_s_1,outputs_1);
+	old_s_2 = examine(digitalRead(SENSOR_2_IN),old_s_2,outputs_2);
+	if (led==HIGH) led = LOW;
+	else led = HIGH;
+	digitalWrite(LED_BUILTIN,led);
+	if (mod4%4==0) {
+		print_on_serial("U");
+		mod4=0;
+	}
+	mod4++;
 }
 #endif
 
@@ -86,31 +97,47 @@ void loop() {
 #ifdef NUCLEO_32
 #include "mbed.h"
 
+#define LOW		0
+#define HIGH	1
+
+#define print_on_serial(x) 	pc.putc(x)
+
 Serial pc(USBTX, USBRX, 9600);
-DigitalIn sensor_in(PB_6,PullDown);
-DigitalOut sensor_out(PB_7,1);
+DigitalIn sensor_1_in(PB_6,PullDown);
+DigitalOut sensor_1_out(PB_7,HIGH);
+DigitalIn sensor_2_in(PB_4,PullDown);
+DigitalOut sensor_2_out(PB_5,HIGH);
 DigitalOut myled(LED1);
 
+char outputs_1[2] = {'o','c'}; // here it's pulldown, not pullup as in huzzah's code
+char outputs_2[2] = {'O','C'}; // here it's pulldown, not pullup as in huzzah's code
+
 int main() {
-    int old_s,new_s;
-    uint8_t mod4=0;
-    old_s = sensor_in.read();
-    pc.baud(9600);
-    pc.format(8,SerialBase::None,1);
-    while (1) {
-        wait(0.25);
-        new_s = sensor_in.read();
-        if (new_s!=old_s) {
-            if (old_s==1) pc.putc('O');
-            else pc.putc('C');
-            old_s = new_s;
-        }
-        myled = !myled;
-        if (mod4%4==0) {
-            pc.putc('U');
-            mod4 = 0;
-        }
-        mod4++;
-    }
+	int old_s_1,old_s_2;
+	uint8_t mod4=0;
+	old_s_1 = sensor_1_in.read();
+	old_s_2 = sensor_2_in.read();
+	pc.baud(9600);
+	pc.format(8,SerialBase::None,1);
+	while (1) {
+		wait(0.25);
+		
+		old_s_1 = examine(sensor_1_in.read(),old_s_1,outputs_1);
+		old_s_2 = examine(sensor_2_in.read(),old_s_2,outputs_2);
+		myled = !myled;
+		if (mod4%4==0) {
+			print_on_serial('U');
+			mod4 = 0;
+		}
+		mod4++;
+	}
 }
 #endif
+
+int examine(int new_status,int old_status,char *variant) {
+	if (new_status != old_status) {
+		if (old_status == HIGH) print_on_serial(variant[0]);
+		else print_on_serial(variant[1]);
+	}
+	return new_status;
+}

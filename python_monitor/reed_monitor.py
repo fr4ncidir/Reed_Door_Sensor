@@ -112,17 +112,17 @@ def main_service(serial_port, device_id):
                     last_time_up = datetime.now()
                     if previous != character:
                         doorLog.info("RDM on device {} is up and running".format(device_id))
-                elif character == b'O':
-                    # received char is 'O' -> the door was opened
-                    notification = "Door opened at {}".format(timestamp)
+                elif character.lower() == b'o':
+                    # received char is 'O' or 'o' -> the door was opened
+                    notification = "{} Door opened at {}".format("FRONT" if character.islower() else "REAR",timestamp)
                     n.notify("STATUS={}".format(notification))
                     last_time_up = datetime.now()
                     if previous != character:
                         doorLog.warning(notification)
                         handle_door_event(notification)
-                elif character == b'C':
-                    # received char is 'C' -> the door was closed
-                    notification = "Door closed at {}".format(timestamp)
+                elif character.lower() == b'c':
+                    # received char is 'C' or 'c'-> the door was closed
+                    notification = "{} Door closed at {}".format("FRONT" if character.islower() else "REAR",timestamp)
                     n.notify("STATUS={}".format(notification))
                     last_time_up = datetime.now()
                     if previous != character:
@@ -205,10 +205,16 @@ def main_on_request(serial_port, device_id):
                         doorLog.info("RDM on device {} is up and running".format(device_id))
                     last_time_up = datetime.now()
                 elif character == b'O':
-                    notification = "Door opened at {}".format(timestamp)
+                    notification = "REAR Door opened at {}".format(timestamp)
                     doorLog.warning(notification)
                 elif character == b'C':
-                    notification = "Door closed at {}".format(timestamp)
+                    notification = "REAR Door closed at {}".format(timestamp)
+                    doorLog.warning(notification)
+                elif character == b'o':
+                    notification = "FRONT Door opened at {}".format(timestamp)
+                    doorLog.warning(notification)
+                elif character == b'c':
+                    notification = "FRONT Door closed at {}".format(timestamp)
                     doorLog.warning(notification)
                 else:
                     if previous != b'E':
